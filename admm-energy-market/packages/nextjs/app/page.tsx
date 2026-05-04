@@ -13,7 +13,7 @@ const FriendMapDashboard = dynamic(
 const ENTITY_NAMES: Record<string, string> = { b1: "Large Steel Plant", b2: "Bus Charging Station", b3: "City Hospital", s1: "Northwest Solar", s2: "Coastal Wind" };
 const TIMESLOTS = ["08:00 - 10:00 (Peak Hours)", "10:00 - 12:00 (Peak Hours)", "14:00 - 16:00 (Normal Hours)", "22:00 - 02:00 (Off-peak Hours)"];
 
-const BACKEND_URL = "http://localhost:3001";
+const BACKEND_URL = "https://energy-backend-w2rj.onrender.com";
 const VERIFYING_CONTRACT = "0x67Ef5633426F88405E5c6492aE45A4a68a74be7c";
 
 export default function MultiAgentADMM() {
