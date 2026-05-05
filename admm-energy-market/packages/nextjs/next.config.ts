@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {  
+  output: 'export',
   reactStrictMode: true,  
   devIndicators: false,  
   // 强制忽略构建过程中的类型错误
