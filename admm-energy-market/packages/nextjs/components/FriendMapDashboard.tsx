@@ -19,7 +19,7 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
 
   // 1. 获取数据
   useEffect(() => {
-    fetch(`http://localhost:3001/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
+    fetch(`http://https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
       .then(res => res.json())
       .then(data => setPriceData(data))
       .catch(err => console.error("Fetch error:", err));
