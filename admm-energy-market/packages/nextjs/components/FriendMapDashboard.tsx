@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSignTypedData, useAccount } from "wagmi";
 import "leaflet/dist/leaflet.css";
 
-// Modification 1: Receive the historyResults array
-export default function FriendMapDashboard({ historyResults, txHash, initialTimeslot }: { historyResults: {slot: string, price: number}[], txHash: string, initialTimeslot?: string }) {
+// Reverted to using basePrice instead of historyResults
+export default function FriendMapDashboard({ basePrice, txHash, initialTimeslot }: { basePrice: number, txHash: string, initialTimeslot?: string }) {
   const { address } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
   
@@ -14,7 +14,6 @@ export default function FriendMapDashboard({ historyResults, txHash, initialTime
   const [loadSlider, setLoadSlider] = useState(50);
   const [priceData, setPriceData] = useState<any>(null);
 
-  // Modification 2: Standardize timeslot strings to match page.tsx exactly
   const TIMESLOTS = [
     "08:00 - 10:00 (Peak Hours)", 
     "10:00 - 12:00 (Peak Hours)", 
@@ -22,23 +21,18 @@ export default function FriendMapDashboard({ historyResults, txHash, initialTime
     "22:00 - 02:00 (Off-peak Hours)"
   ];
   const [selectedTimeslot, setSelectedTimeslot] = useState(initialTimeslot || TIMESLOTS[0]);
-
-  // Ultimate Defensive Code: Prevent crashes if historyResults is undefined
-  const safeHistory = historyResults || []; 
-  // Modification 3: Retrieve the corresponding price from safeHistory based on the selected timeslot
-  const currentBasePrice = safeHistory.find(h => h.slot === selectedTimeslot)?.price || 0;
   
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layerGroupRef = useRef<any>(null);
 
-  // Fetch data (using currentBasePrice instead of a fixed basePrice)
+  // Fetch data using the unified basePrice
   useEffect(() => {
-    fetch(`https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${currentBasePrice}`)
+    fetch(`https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
       .then(res => res.json())
       .then(data => setPriceData(data))
       .catch(err => console.error("Fetch error:", err));
-  }, [activeStation, activeBuyer, loadSlider, currentBasePrice, selectedTimeslot]);
+  }, [activeStation, activeBuyer, loadSlider, basePrice, selectedTimeslot]);
 
   // Initialize Map
   useEffect(() => {
@@ -139,8 +133,8 @@ export default function FriendMapDashboard({ historyResults, txHash, initialTime
            </div>
            <div className="text-right">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Clearing Price</span>
-              {/* Modification 4: Display dynamically fetched price for the current timeslot */}
-              <p className="text-4xl font-black font-mono tracking-tighter">£{currentBasePrice.toFixed(2)}</p>
+              {/* Reverted to displaying the static basePrice */}
+              <p className="text-4xl font-black font-mono tracking-tighter">£{basePrice.toFixed(2)}</p>
            </div>
            <div className="text-right border-l border-white/20 pl-12">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Local Load</span>
