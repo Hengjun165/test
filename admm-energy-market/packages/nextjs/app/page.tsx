@@ -5,7 +5,7 @@ import { useAccount, useSignTypedData, useChainId } from "wagmi";
 import { ConnectButton } from "@rainbow-me/rainbowkit"; 
 import dynamic from 'next/dynamic';
 
-// 修改：增加传入 initialTimeslot 属性
+// Modification: Added dynamic import and initialTimeslot property
 const FriendMapDashboard = dynamic(
   () => import('../components/FriendMapDashboard'),
   { ssr: false } 
@@ -95,7 +95,7 @@ export default function MultiAgentADMM() {
     const newHistory = [...historyResults, { slot: selectedTimeslot, price: state.currentPrice }];
     setHistoryResults(newHistory);
     
-    // 如果完成了 4 个时段的博弈，进行链上结算
+    // Execute on-chain settlement if the 4-timeslot negotiation is complete
     if (newHistory.length >= 4) {
       try {
         const avgPrice = newHistory.reduce((a, b) => a + b.price, 0) / 4;
@@ -140,7 +140,7 @@ export default function MultiAgentADMM() {
         
         if (!res.ok) {
             const errorText = await res.text();
-            throw new Error(`后端错误: ${errorText.includes('<!DOCTYPE') ? '404接口不存在' : errorText}`);
+            throw new Error(`Backend Error: ${errorText.includes('<!DOCTYPE') ? '404 API Not Found' : errorText}`);
         }
 
         const data = await res.json();
@@ -149,12 +149,12 @@ export default function MultiAgentADMM() {
           setCurrentStep(2); 
         }
       } catch (e: any) { 
-          console.error("🔥 Error Detail:", e);
-          if (e.message.includes("User rejected")) alert("签名被拒绝");
-          else alert(`系统错误: ${e.message}`);
+          console.error("Error Detail:", e);
+          if (e.message.includes("User rejected")) alert("Signature rejected by user.");
+          else alert(`System Error: ${e.message}`);
       }
     } else { 
-      // 没到 4 个，重置状态进行下一个时段
+      // If fewer than 4 slots are completed, reset state for the next timeslot
       setIsFloorActive(false); 
       setSelectedTimeslot(""); 
       setLocked({}); 
@@ -250,7 +250,7 @@ export default function MultiAgentADMM() {
                         : 'bg-slate-800 text-slate-600 cursor-not-allowed opacity-50'
                     }`}
                   >
-                    {historyResults.length === 3 ? 'FINAL SIGN & ANCHOR ✍️' : 'CONFIRM & PROCEED'}
+                    {historyResults.length === 3 ? 'FINAL SIGN & ANCHOR' : 'CONFIRM & PROCEED'}
                   </button>
                 </div>
               </div>
@@ -307,6 +307,7 @@ export default function MultiAgentADMM() {
         <FriendMapDashboard 
            basePrice={historyResults.reduce((a, b) => a + b.price, 0) / 4} 
            txHash={txHash}
+           initialTimeslot={selectedTimeslot}
         />
       )}
     </div>
