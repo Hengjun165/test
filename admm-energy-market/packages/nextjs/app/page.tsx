@@ -305,7 +305,7 @@ export default function MultiAgentADMM() {
 
       {currentStep === 2 && (
         <FriendMapDashboard 
-           basePrice={historyResults.reduce((a, b) => a + b.price, 0) / 4} 
+           basePrice={historyResults} 
            txHash={txHash}
            initialTimeslot={selectedTimeslot}
         />
