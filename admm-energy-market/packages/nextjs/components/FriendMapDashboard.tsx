@@ -8,22 +8,33 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
   const { address } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
   
+  // 核心状态
   const [activeStation, setActiveStation] = useState("s1");
   const [activeBuyer, setActiveBuyer] = useState("b1"); 
   const [loadSlider, setLoadSlider] = useState(50);
   const [priceData, setPriceData] = useState<any>(null);
+
+  // --- 新增：时间段逻辑 ---
+  const TIMESLOTS = [
+    "08:00 - 10:00 (Peak)", 
+    "10:00 - 12:00 (Peak)", 
+    "14:00 - 16:00 (Normal)", 
+    "22:00 - 02:00 (Off-peak)"
+  ];
+  const [selectedTimeslot, setSelectedTimeslot] = useState(TIMESLOTS[0]);
   
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layerGroupRef = useRef<any>(null);
 
-  // 1. 获取数据
+  // 1. 获取数据 (加入 selectedTimeslot 依赖)
   useEffect(() => {
-    fetch(`http://https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
+    // 如果后端支持 timeslot 参数，可以带上：&timeslot=${selectedTimeslot}
+    fetch(`https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
       .then(res => res.json())
       .then(data => setPriceData(data))
       .catch(err => console.error("Fetch error:", err));
-  }, [activeStation, activeBuyer, loadSlider, basePrice]);
+  }, [activeStation, activeBuyer, loadSlider, basePrice, selectedTimeslot]);
 
   // 2. 初始化地图
   useEffect(() => {
@@ -31,13 +42,10 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
 
     const initMap = async () => {
       const L = (await import("leaflet")).default;
-
-      // 防止重复初始化
       if ((containerRef.current as any)._leaflet_id) return;
 
       const map = L.map(containerRef.current).setView([54.0, -2.5], 6);
       
-      // 🌟 更换为最稳定的瓦片源，解决“全黑”问题
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(map);
@@ -45,7 +53,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
       layerGroupRef.current = L.layerGroup().addTo(map);
       mapRef.current = map;
 
-      // 🌟 核心修复：强制刷新地图尺寸，解决黑屏问题
       setTimeout(() => {
         map.invalidateSize();
       }, 200);
@@ -80,11 +87,9 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
         iconSize: [50, 50]
       });
 
-      // 添加标记
-      const sMarker = L.marker(priceData.sellerPos, { icon: createIcon(activeStation === 's1' ? '☀️' : '🌬️', priceData.sellerName, '#fbbf24') }).addTo(layerGroup);
-      const bMarker = L.marker(priceData.buyerPos, { icon: createIcon('🏭', priceData.buyerName, '#3b82f6') }).addTo(layerGroup);
+      L.marker(priceData.sellerPos, { icon: createIcon(activeStation === 's1' ? '☀️' : '🌬️', priceData.sellerName, '#fbbf24') }).addTo(layerGroup);
+      L.marker(priceData.buyerPos, { icon: createIcon('🏭', priceData.buyerName, '#3b82f6') }).addTo(layerGroup);
 
-      // 绘制虚线
       const polyline = L.polyline([priceData.sellerPos, priceData.buyerPos], {
         color: activeStation === 's1' ? '#f59e0b' : '#2563eb',
         weight: 5,
@@ -92,7 +97,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
         className: 'animate-dash'
       }).addTo(layerGroup);
 
-      // 缩放视野
       mapRef.current.fitBounds(polyline.getBounds(), { padding: [100, 100] });
     };
 
@@ -111,7 +115,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white overflow-hidden">
-      {/* 强行补入 Leaflet 样式，防止地图瓦片崩溃 */}
       <style>{`
         .animate-dash { stroke-dashoffset: 1000; animation: dash 5s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: 0; } }
@@ -126,6 +129,13 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
            <p className="text-xs text-blue-100 font-mono opacity-80 uppercase tracking-widest mt-1">Status: SECURE_TRANSMISSION // TX: {txHash.slice(0,20)}...</p>
         </div>
         <div className="flex gap-12 text-white">
+           {/* --- 新增：顶部时间显示 --- */}
+           <div className="text-right border-r border-white/10 pr-12">
+              <span className="text-[10px] font-bold text-blue-200 uppercase">Active Period</span>
+              <p className="text-4xl font-black font-mono tracking-tighter text-orange-400">
+                {selectedTimeslot.split(' ')[0]}
+              </p>
+           </div>
            <div className="text-right">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Clearing Price</span>
               <p className="text-4xl font-black font-mono tracking-tighter">£{basePrice.toFixed(2)}</p>
@@ -149,6 +159,20 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
         {/* 右侧控制台 */}
         <div className="w-[450px] bg-white p-10 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.1)] z-10 shrink-0 overflow-y-auto">
            
+           {/* --- 新增：时间段选择器 --- */}
+           <div className="mb-8">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">Market Schedule</label>
+              <select 
+                value={selectedTimeslot}
+                onChange={(e) => setSelectedTimeslot(e.target.value)}
+                className="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-[#005c9c] transition-all cursor-pointer"
+              >
+                {TIMESLOTS.map(slot => (
+                  <option key={slot} value={slot}>{slot}</option>
+                ))}
+              </select>
+           </div>
+
            {/* 1. 卖家 */}
            <div className="mb-10">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">1. Energy Source Selection</label>
