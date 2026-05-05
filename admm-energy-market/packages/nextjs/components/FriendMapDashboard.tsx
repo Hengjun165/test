@@ -8,13 +8,13 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
   const { address } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
   
-  // 核心状态
+  // Core states
   const [activeStation, setActiveStation] = useState("s1");
   const [activeBuyer, setActiveBuyer] = useState("b1"); 
   const [loadSlider, setLoadSlider] = useState(50);
   const [priceData, setPriceData] = useState<any>(null);
 
-  // --- 新增：时间段逻辑 ---
+  // --- Timeslot logic ---
   const TIMESLOTS = [
     "08:00 - 10:00 (Peak)", 
     "10:00 - 12:00 (Peak)", 
@@ -27,16 +27,16 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
   const containerRef = useRef<HTMLDivElement>(null);
   const layerGroupRef = useRef<any>(null);
 
-  // 1. 获取数据 (加入 selectedTimeslot 依赖)
+  // 1. Fetch data (with selectedTimeslot dependency)
   useEffect(() => {
-    // 如果后端支持 timeslot 参数，可以带上：&timeslot=${selectedTimeslot}
+    // If the backend supports the timeslot parameter, you can append: &timeslot=${selectedTimeslot}
     fetch(`https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
       .then(res => res.json())
       .then(data => setPriceData(data))
       .catch(err => console.error("Fetch error:", err));
   }, [activeStation, activeBuyer, loadSlider, basePrice, selectedTimeslot]);
 
-  // 2. 初始化地图
+  // 2. Initialize map
   useEffect(() => {
     if (typeof window === "undefined" || !containerRef.current) return;
 
@@ -68,7 +68,7 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
     };
   }, []);
 
-  // 3. 更新标记和连线
+  // 3. Update markers and polylines
   useEffect(() => {
     if (!priceData || !mapRef.current || !layerGroupRef.current) return;
     
@@ -109,8 +109,8 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
       const types = { Settlement: [{ name: "entity", type: "string" }, { name: "price", type: "uint256" }, { name: "amount", type: "uint256" }] };
       const value = { entity: activeBuyer, price: BigInt(Math.floor(parseFloat(priceData.finalPrice) * 100)), amount: BigInt(loadSlider * 100) };
       await signTypedDataAsync({ domain, types, primaryType: "Settlement", message: value });
-      alert("✅ Settlement Confirmed!");
-    } catch (e) { alert("❌ Rejected"); }
+      alert("Settlement Confirmed!");
+    } catch (e) { alert("Rejected"); }
   };
 
   return (
@@ -122,14 +122,14 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
         .custom-div-icon { background: transparent !important; border: none !important; }
       `}</style>
 
-      {/* 顶部 Header */}
+      {/* Top Header */}
       <div className="h-24 bg-[#005c9c] flex justify-between items-center px-12 shadow-2xl border-b-4 border-[#004a7c] shrink-0 z-10">
         <div>
            <h2 className="text-3xl font-black tracking-tighter text-white italic">UK NATIONAL DISPATCH</h2>
            <p className="text-xs text-blue-100 font-mono opacity-80 uppercase tracking-widest mt-1">Status: SECURE_TRANSMISSION // TX: {txHash.slice(0,20)}...</p>
         </div>
         <div className="flex gap-12 text-white">
-           {/* --- 新增：顶部时间显示 --- */}
+           {/* --- Time Display --- */}
            <div className="text-right border-r border-white/10 pr-12">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Active Period</span>
               <p className="text-4xl font-black font-mono tracking-tighter text-orange-400">
@@ -148,7 +148,7 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* 左侧地图 */}
+        {/* Left Map Section */}
         <div className="flex-1 relative bg-slate-100" ref={containerRef}>
             <div className="absolute top-6 left-6 z-[1000] bg-white/90 backdrop-blur-md p-4 rounded-xl border-2 border-[#005c9c] shadow-xl">
                 <p className="text-[10px] font-black text-[#005c9c] uppercase mb-1">Live Grid Topology</p>
@@ -156,10 +156,10 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
             </div>
         </div>
 
-        {/* 右侧控制台 */}
+        {/* Right Console Section */}
         <div className="w-[450px] bg-white p-10 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.1)] z-10 shrink-0 overflow-y-auto">
            
-           {/* --- 新增：时间段选择器 --- */}
+           {/* --- Timeslot Selector --- */}
            <div className="mb-8">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">Market Schedule</label>
               <select 
@@ -173,7 +173,7 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
               </select>
            </div>
 
-           {/* 1. 卖家 */}
+           {/* 1. Sellers */}
            <div className="mb-10">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">1. Energy Source Selection</label>
               <div className="grid grid-cols-2 gap-4">
@@ -182,14 +182,14 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
               </div>
            </div>
 
-           {/* 2. 买家身份 */}
+           {/* 2. Buyer Identity */}
            <div className="mb-10">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">2. Select Your Identity</label>
               <div className="flex flex-col gap-3">
                  {[
-                   {id: 'b1', name: '🏭 LARGE STEEL PLANT'},
-                   {id: 'b2', name: '🚌 BUS CHARGING STATION'},
-                   {id: 'b3', name: '🏥 CITY HOSPITAL'}
+                   {id: 'b1', name: 'LARGE STEEL PLANT'},
+                   {id: 'b2', name: 'BUS CHARGING STATION'},
+                   {id: 'b3', name: 'CITY HOSPITAL'}
                  ].map(buyer => (
                    <button 
                      key={buyer.id}
