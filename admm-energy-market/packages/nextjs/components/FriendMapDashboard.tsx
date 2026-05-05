@@ -4,39 +4,43 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSignTypedData, useAccount } from "wagmi";
 import "leaflet/dist/leaflet.css";
 
-export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: number, txHash: string }) {
+// Modification 1: Receive the historyResults array
+export default function FriendMapDashboard({ historyResults, txHash, initialTimeslot }: { historyResults: {slot: string, price: number}[], txHash: string, initialTimeslot?: string }) {
   const { address } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
   
-  // Core states
   const [activeStation, setActiveStation] = useState("s1");
   const [activeBuyer, setActiveBuyer] = useState("b1"); 
   const [loadSlider, setLoadSlider] = useState(50);
   const [priceData, setPriceData] = useState<any>(null);
 
-  // --- Timeslot logic ---
+  // Modification 2: Standardize timeslot strings to match page.tsx exactly
   const TIMESLOTS = [
-    "08:00 - 10:00 (Peak)", 
-    "10:00 - 12:00 (Peak)", 
-    "14:00 - 16:00 (Normal)", 
-    "22:00 - 02:00 (Off-peak)"
+    "08:00 - 10:00 (Peak Hours)", 
+    "10:00 - 12:00 (Peak Hours)", 
+    "14:00 - 16:00 (Normal Hours)", 
+    "22:00 - 02:00 (Off-peak Hours)"
   ];
-  const [selectedTimeslot, setSelectedTimeslot] = useState(TIMESLOTS[0]);
+  const [selectedTimeslot, setSelectedTimeslot] = useState(initialTimeslot || TIMESLOTS[0]);
+
+  // Ultimate Defensive Code: Prevent crashes if historyResults is undefined
+  const safeHistory = historyResults || []; 
+  // Modification 3: Retrieve the corresponding price from safeHistory based on the selected timeslot
+  const currentBasePrice = safeHistory.find(h => h.slot === selectedTimeslot)?.price || 0;
   
   const mapRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layerGroupRef = useRef<any>(null);
 
-  // 1. Fetch data (with selectedTimeslot dependency)
+  // Fetch data (using currentBasePrice instead of a fixed basePrice)
   useEffect(() => {
-    // If the backend supports the timeslot parameter, you can append: &timeslot=${selectedTimeslot}
-    fetch(`https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${basePrice}`)
+    fetch(`https://energy-backend-w2rj.onrender.com/calculate-final-price?stationId=${activeStation}&buyerId=${activeBuyer}&load=${loadSlider}&admmPrice=${currentBasePrice}`)
       .then(res => res.json())
       .then(data => setPriceData(data))
       .catch(err => console.error("Fetch error:", err));
-  }, [activeStation, activeBuyer, loadSlider, basePrice, selectedTimeslot]);
+  }, [activeStation, activeBuyer, loadSlider, currentBasePrice, selectedTimeslot]);
 
-  // 2. Initialize map
+  // Initialize Map
   useEffect(() => {
     if (typeof window === "undefined" || !containerRef.current) return;
 
@@ -53,9 +57,7 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
       layerGroupRef.current = L.layerGroup().addTo(map);
       mapRef.current = map;
 
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 200);
+      setTimeout(() => { map.invalidateSize(); }, 200);
     };
 
     initMap();
@@ -68,7 +70,7 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
     };
   }, []);
 
-  // 3. Update markers and polylines
+  // Update map markers and polylines
   useEffect(() => {
     if (!priceData || !mapRef.current || !layerGroupRef.current) return;
     
@@ -129,7 +131,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
            <p className="text-xs text-blue-100 font-mono opacity-80 uppercase tracking-widest mt-1">Status: SECURE_TRANSMISSION // TX: {txHash.slice(0,20)}...</p>
         </div>
         <div className="flex gap-12 text-white">
-           {/* --- Time Display --- */}
            <div className="text-right border-r border-white/10 pr-12">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Active Period</span>
               <p className="text-4xl font-black font-mono tracking-tighter text-orange-400">
@@ -138,7 +139,8 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
            </div>
            <div className="text-right">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Clearing Price</span>
-              <p className="text-4xl font-black font-mono tracking-tighter">£{basePrice.toFixed(2)}</p>
+              {/* Modification 4: Display dynamically fetched price for the current timeslot */}
+              <p className="text-4xl font-black font-mono tracking-tighter">£{currentBasePrice.toFixed(2)}</p>
            </div>
            <div className="text-right border-l border-white/20 pl-12">
               <span className="text-[10px] font-bold text-blue-200 uppercase">Local Load</span>
@@ -148,7 +150,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
       </div>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left Map Section */}
         <div className="flex-1 relative bg-slate-100" ref={containerRef}>
             <div className="absolute top-6 left-6 z-[1000] bg-white/90 backdrop-blur-md p-4 rounded-xl border-2 border-[#005c9c] shadow-xl">
                 <p className="text-[10px] font-black text-[#005c9c] uppercase mb-1">Live Grid Topology</p>
@@ -156,10 +157,8 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
             </div>
         </div>
 
-        {/* Right Console Section */}
         <div className="w-[450px] bg-white p-10 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.1)] z-10 shrink-0 overflow-y-auto">
            
-           {/* --- Timeslot Selector --- */}
            <div className="mb-8">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">Market Schedule</label>
               <select 
@@ -173,7 +172,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
               </select>
            </div>
 
-           {/* 1. Sellers */}
            <div className="mb-10">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">1. Energy Source Selection</label>
               <div className="grid grid-cols-2 gap-4">
@@ -182,7 +180,6 @@ export default function FriendMapDashboard({ basePrice, txHash }: { basePrice: n
               </div>
            </div>
 
-           {/* 2. Buyer Identity */}
            <div className="mb-10">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-4">2. Select Your Identity</label>
               <div className="flex flex-col gap-3">
